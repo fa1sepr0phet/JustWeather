@@ -1,59 +1,95 @@
-# NWS Weather (Android)
+#  NWS Weather
 
-A modern Android weather app built on official National Weather Service data, with support for both address search and real-time device location.
-
-This project focuses on clean architecture, reliable public data sources, and a simple user experience without unnecessary complexity.
-
----
-
-## Overview
-
-NWS Weather pulls forecast data directly from weather.gov and uses U.S. Census geocoding to translate addresses into usable coordinates. It supports both manual address search and device-based location, making it flexible for different use cases.
-
-The app is designed to be a clean, maintainable starting point for anyone building an Android weather application.
+> A clean, ad-free, open-source weather app powered by the National Weather Service  
+> No tracking. No subscriptions. No nonsense.
 
 ---
 
-## Features
+##  About
 
-- Search U.S. street addresses using the Census geocoder  
-- Retrieve current location using Google Play Services  
-- Display forecast data from the National Weather Service API  
-- Save and manage favorite locations locally using Room  
-- Built with a modern Material 3 UI using Jetpack Compose  
+NWS Weather is a simple Android weather application built using official data from the National Weather Service (NWS).
 
----
+The goal is straightforward:
 
-## Project Structure
-
-The project is organized to separate responsibilities clearly and keep things maintainable:
-
-- `data/`  
-  Handles API communication, data models, Room database, and repository logic  
-
-- `location/`  
-  Provides a wrapper around Google Play Services location APIs via `DeviceLocationClient`  
-
-- `presentation/`  
-  Manages UI state and user actions through `WeatherViewModel`  
-
-- `ui/`  
-  Contains Compose screens, reusable UI components, and theming  
-
-- `di/`  
-  Lightweight dependency container without introducing a full DI framework  
+> Provide accurate weather data in a clean, fast interface—without ads, tracking, or monetization.
 
 ---
 
-## Getting Started
+##  Philosophy
 
-### Prerequisites
+Weather is public information.
 
-- Android Studio (latest recommended)
-- Android device or emulator
+Many modern weather platforms rely on ads, subscriptions, and user tracking. This project is a small step in the opposite direction—keeping weather simple, transparent, and accessible.
 
-### Setup
+- No ads  
+- No analytics or tracking  
+- No subscriptions  
+- No paywalls  
+- No data harvesting  
+
+**Just weather.**
+
+---
+
+##  Features
+
+-  GPS-based weather lookup  
+-  Address search using Android Geocoder  
+-  Save favorite locations locally  
+-  Forecast data directly from the National Weather Service  
+-  Dynamic atmospheric UI based on current conditions  
+-  Clean, modern Material 3 design  
+-  Detailed forecast breakdowns  
+-  Home screen widget support  
+
+---
+
+##  Privacy
+
+This app is designed with privacy as a core principle.
+
+- No analytics  
+- No tracking  
+- No advertising SDKs  
+- No data collection beyond what is required for functionality  
+
+### Location Usage
+
+- Location is used only to retrieve weather data  
+- Location data is never stored remotely  
+- Location access is optional and user-controlled  
+
+### Network Requests
+
+- Weather data is retrieved from the National Weather Service API  
+- Address lookup uses Android's built-in Geocoder  
+
+No user data is sent to third-party tracking or analytics services.
+
+---
+
+##  Tech Stack
+
+- Kotlin  
+- Jetpack Compose  
+- Material 3  
+- Android Architecture Components (ViewModel)  
+- Room (local storage)  
+- WorkManager (background updates)  
+- Retrofit + OkHttp  
+- Glance (widgets)  
+
+---
+
+##  Building the App
+
+### Requirements
+
+- Android Studio (latest stable)
+- Android SDK
+
+### Steps
 
 ```bash
 git clone https://github.com/fa1sepr0phet/NWS-Weather.git
-cd nws-weather-starter
+cd NWS-Weather
