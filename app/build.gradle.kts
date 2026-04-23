@@ -18,15 +18,15 @@ val localProperties = Properties().apply {
 }
 
 android {
-    namespace = "com.nwsweather"
+    namespace = "com.nwsweather.myapp"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.nwsweather"
+        applicationId = "com.nwsweather.myapp"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
