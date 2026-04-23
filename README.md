@@ -11,7 +11,7 @@ NWS Weather is a simple Android weather application built using official data fr
 
 The goal is straightforward:
 
-> Provide accurate weather data in a clean, fast interface—without ads, tracking, or monetization.
+> Provide accurate weather data in a clean, fast interface without ads, tracking, or monetization.
 
 ---
 
