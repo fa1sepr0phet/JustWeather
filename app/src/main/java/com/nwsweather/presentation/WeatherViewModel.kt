@@ -89,7 +89,7 @@ class WeatherViewModel(
         }
     }
 
-    private fun launchLoad(block: suspend () -> com.example.nwsweather.data.repository.ForecastLoadResult) {
+    private fun launchLoad(block: suspend () -> com.nwsweather.data.repository.ForecastLoadResult) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             runCatching { block() }
