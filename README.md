@@ -93,6 +93,7 @@ No user data is sent to third-party tracking or analytics services.
 ```bash
 git clone https://github.com/fa1sepr0phet/NWS-Weather.git
 cd NWS-Weather
+```
 
 ##  License
 
