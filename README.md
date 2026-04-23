@@ -1,24 +1,59 @@
-# NWS Weather
+# NWS Weather (Android)
 
-Refactored Android starter for weather.gov + Census geocoding.
+A modern Android weather app built on official National Weather Service data, with support for both address search and real-time device location.
 
-## Architecture
+This project focuses on clean architecture, reliable public data sources, and a simple user experience without unnecessary complexity.
 
-- `data/` handles network, models, Room persistence, and repository logic
-- `location/` wraps Google Play Services location access behind `DeviceLocationClient`
-- `presentation/` owns UI state and screen actions in `WeatherViewModel`
-- `ui/` contains Compose screens, components, and theme
-- `di/` provides a lightweight application container without adding a full DI framework
+---
+
+## Overview
+
+NWS Weather pulls forecast data directly from weather.gov and uses U.S. Census geocoding to translate addresses into usable coordinates. It supports both manual address search and device-based location, making it flexible for different use cases.
+
+The app is designed to be a clean, maintainable starting point for anyone building an Android weather application.
+
+---
 
 ## Features
 
-- Search U.S. street addresses using the Census geocoder
-- Use current device location through Google Play services
-- Pull forecast data from the National Weather Service API
-- Save favorite locations locally with Room
-- Clean modern Material 3 UI
+- Search U.S. street addresses using the Census geocoder  
+- Retrieve current location using Google Play Services  
+- Display forecast data from the National Weather Service API  
+- Save and manage favorite locations locally using Room  
+- Built with a modern Material 3 UI using Jetpack Compose  
 
-## Notes
+---
 
-- Update the NWS `User-Agent` contact in `ApiModule.kt` if you want to use your own app identity.
-- Current-location lookup is more reliable on a real phone than on the emulator.
+## Project Structure
+
+The project is organized to separate responsibilities clearly and keep things maintainable:
+
+- `data/`  
+  Handles API communication, data models, Room database, and repository logic  
+
+- `location/`  
+  Provides a wrapper around Google Play Services location APIs via `DeviceLocationClient`  
+
+- `presentation/`  
+  Manages UI state and user actions through `WeatherViewModel`  
+
+- `ui/`  
+  Contains Compose screens, reusable UI components, and theming  
+
+- `di/`  
+  Lightweight dependency container without introducing a full DI framework  
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Android Studio (latest recommended)
+- Android device or emulator
+
+### Setup
+
+```bash
+git clone https://github.com/fa1sepr0phet/NWS-Weather.git
+cd nws-weather-starter
