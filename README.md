@@ -1,7 +1,7 @@
 #  NWS Weather
 
 > A clean, ad-free, open-source weather app powered by the National Weather Service  
-> No tracking. No subscriptions. No nonsense.
+> No tracking. No subscriptions. No bullshit link to an unusable website when you click for weather details.
 
 ---
 
