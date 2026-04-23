@@ -18,11 +18,28 @@ If you choose to use location-based features:
 - Location data is not stored, logged, or transmitted to any third-party services
 - Location access is optional and can be denied at any time
 
-### Network Requests
+## Network Requests
 
-This app makes requests only to official National Weather Service APIs in order to retrieve weather data.
+This app makes network requests to retrieve weather and location data.
 
-No data is sent to any other external services.
+### National Weather Service (NWS)
+
+- Weather forecasts and related data are retrieved from official National Weather Service APIs
+- These requests include location coordinates (latitude/longitude) to return relevant weather data
+
+### Address Lookup (Geocoding)
+
+- Address search functionality uses Android’s built-in `Geocoder`
+- Depending on the device and configuration, geocoding requests may be handled by a system-provided backend (such as a Google location service)
+- This is part of the Android operating system and not a third-party library included by this app
+
+### Data Handling
+
+- The app does not store or log network requests
+- No user data is sent to any analytics, advertising, or tracking services
+- No additional third-party APIs are used by the application itself
+
+Only the minimum data required to provide weather and location functionality is used.
 
 ### Data Storage
 
