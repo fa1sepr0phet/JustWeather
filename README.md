@@ -31,7 +31,7 @@ Many modern weather platforms rely on ads, subscriptions, and user tracking. Thi
 
 ## Philosophy on Usage
 
-This project is released under the MIT License to encourage openness and collaboration.
+This project is released under the GPLv3 License to encourage openness and collaboration.
 
 However, the intent of this project is to keep weather information free, accessible, and free from monetization.
 
