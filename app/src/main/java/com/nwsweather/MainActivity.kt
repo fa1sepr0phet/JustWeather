@@ -1,0 +1,75 @@
+package com.nwsweather
+
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
+import androidx.compose.runtime.getValue
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nwsweather.di.AppContainer
+import com.nwsweather.presentation.WeatherViewModel
+import com.nwsweather.presentation.WeatherViewModelFactory
+import com.nwsweather.ui.screens.WeatherRoute
+import com.nwsweather.ui.theme.NwsWeatherTheme
+
+class MainActivity : ComponentActivity() {
+    private val appContainer by lazy { AppContainer(this) }
+    private val viewModel: WeatherViewModel by viewModels {
+        WeatherViewModelFactory(appContainer.weatherRepository)
+    }
+
+    private val locationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+
+            if (granted) {
+                viewModel.fetchCurrentLocation()
+            } else {
+                viewModel.onLocationPermissionDenied()
+            }
+        }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
+        setContent {
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            NwsWeatherTheme(appTheme = uiState.theme) {
+                WeatherRoute(
+                    viewModel = viewModel,
+                    onRequestCurrentLocation = { requestCurrentLocation() }
+                )
+            }
+        }
+    }
+
+    private fun requestCurrentLocation() {
+        val fineGranted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val coarseGranted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (fineGranted || coarseGranted) {
+            viewModel.fetchCurrentLocation()
+        } else {
+            locationPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
+    }
+}

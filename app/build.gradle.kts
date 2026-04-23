@@ -18,11 +18,11 @@ val localProperties = Properties().apply {
 }
 
 android {
-    namespace = "com.nwsweather.myapp"
+    namespace = "com.nwsweather"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.nwsweather.myapp"
+        applicationId = "com.nwsweather"
         minSdk = 26
         targetSdk = 35
         versionCode = 2
