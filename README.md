@@ -93,6 +93,8 @@ No user data is sent to third-party tracking or analytics services.
 ```bash
 git clone https://github.com/fa1sepr0phet/JustWeather.git
 cd JustWeather
+./gradlew assembleDebug
+Open in Android Studio
 ```
 
 ##  License
