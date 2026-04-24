@@ -7,7 +7,7 @@
 
 ##  About
 
-NWS Weather is a simple Android weather application built using official data from the National Weather Service (NWS).
+JustWeather is a simple Android weather application built using official data from the National Weather Service (NWS).
 
 The goal is straightforward:
 
