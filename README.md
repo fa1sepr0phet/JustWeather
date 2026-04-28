@@ -16,9 +16,9 @@ The goal is straightforward:
 ---
 
 <p align="center">
-  <img src="images/4677.png" width="30%" />
-  <img src="images/4679.png" width="30%" />
-  <img src="images/4681.png" width="30%" />
+  <img src="images/4681clean.png" width="30%" />
+  <img src="images/kc2clean.png" width="30%" />
+  <img src="images/kcclean.png" width="30%" />
 </p>
 
 ##  Philosophy
