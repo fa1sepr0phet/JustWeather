@@ -1,127 +1,100 @@
-#   JustWeather
+# JustWeather
 
-> A clean, ad-free, open-source weather app powered by the National Weather Service  
-> No tracking. No subscriptions. No bullshit link to an unusable website when you click for weather details.
+> A clean, privacy-focused, open-source Android weather app powered by the National Weather Service.
 
----
+**No ads. No analytics. No tracking. No subscriptions.**
 
-##  About
-
-JustWeather is a simple Android weather application built using official data from the National Weather Service (NWS).
-
-The goal is straightforward:
-
-> Provide accurate weather data in a clean, fast interface without ads, tracking, or monetization.
+JustWeather exists for one reason: to show accurate weather without turning users into the product.
 
 ---
+
+## Screenshots
 
 <p align="center">
-  <img src="images/4681clean.png" width="30%" />
-  <img src="images/kc2clean.png" width="30%" />
+  <img src="images/4681.png" width="30%" />
   <img src="images/kcclean.png" width="30%" />
+  <img src="images/kc2clean.png" width="30%" />
 </p>
 
-##  Philosophy
+## Why JustWeather?
 
-Weather is public information.
+Most weather apps are overloaded with ads, trackers, subscriptions, bloated web views, and data-hungry SDKs.
 
-Many modern weather platforms rely on ads, subscriptions, and user tracking. This project is a small step in the opposite direction by keeping weather simple, transparent, and accessible.
+JustWeather takes the opposite approach:
 
-- No ads  
-- No analytics or tracking  
-- No subscriptions  
-- No paywalls  
-- No data harvesting  
+- No advertising SDKs
+- No analytics SDKs
+- No user accounts
+- No subscriptions
+- No paywalls
+- No third-party tracking
+- Weather data from the National Weather Service
+- Saved locations stored locally on-device
+- Fully open source under GPLv3
 
-**Just weather.**
-
----
-
-##  Features
-
--  GPS-based weather lookup  
--  Address search using Android Geocoder  
--  Save favorite locations locally  
--  Forecast data directly from the National Weather Service  
--  Dynamic atmospheric UI based on current conditions  
--  Clean, modern Material 3 design  
--  Detailed forecast breakdowns  
--  Home screen widget support  
+Just weather.
 
 ---
 
-##  Privacy
+## Features
 
-This app is designed with privacy as a core principle.
-
-- No analytics  
-- No tracking  
-- No advertising SDKs  
-- No data collection beyond what is required for functionality  
-
-### Location Usage
-
-- Location is used only to retrieve weather data  
-- Location data is never stored remotely  
-- Location access is optional and user-controlled  
-
-### Network Requests
-
-- Weather data is retrieved from the National Weather Service API  
-- Address lookup uses Android's built-in Geocoder  
-
-No user data is sent to third-party tracking or analytics services.
+- Current weather conditions
+- Detailed forecasts from the National Weather Service
+- GPS-based weather lookup
+- Manual address/location search
+- Saved favorite locations
+- Home screen widget support
+- Dynamic weather-based UI
+- Modern Kotlin + Jetpack Compose interface
 
 ---
 
-##  Tech Stack
+## Privacy
 
-- Kotlin  
-- Jetpack Compose  
-- Material 3  
-- Android Architecture Components (ViewModel)  
-- Room (local storage)  
-- WorkManager (background updates)  
-- Retrofit + OkHttp  
-- Glance (widgets)  
+JustWeather is designed with privacy as a core feature, not an afterthought.
+
+The app does not include advertising, analytics, or tracking SDKs. It does not require an account and does not sell, share, or monetize user data.
+
+Location access is optional and used only to retrieve weather for the user’s selected area.
+
+For more detail, see [`PRIVACY.md`](PRIVACY.md).
 
 ---
 
-##  Building the App
+## Network Requests
 
-### Requirements
+JustWeather makes network requests only for weather and location functionality.
 
-- Android Studio (latest stable)
-- Android SDK
+Primary service:
 
-### Steps
+- `api.weather.gov` — National Weather Service weather forecast data
+
+Possible system-level service:
+
+- Android `Geocoder` — used for address lookup; the backend may depend on the device, Android version, or OEM.
+
+JustWeather does not send data to analytics, advertising, crash-reporting, or tracking services.
+
+---
+
+## Standard Build
+git clone https://github.com/fa1sepr0phet/JustWeather.git
+```cd JustWeather
+./gradlew assembleRelease
+```
+
+For a debug buld:
+```
+./gradlew assembleDebug
+
+## FOSS / Privacy Build
+
+JustWeather supports a FOSS-oriented build for users and distributors who want to avoid Google Play Services dependencies.
 
 ```bash
-git clone https://github.com/fa1sepr0phet/JustWeather.git
-cd JustWeather
-./gradlew assembleDebug
+./gradlew assembleFossRelease
 ```
-Open in Android Studio
-
-
-##  License
-
-This project is licensed under the GNU General Public License v3.0 (GPLv3).
-
-This means:
-
-- You are free to use, modify, and distribute this software  
-- Any distributed modifications must also be open-source  
-- This project cannot be incorporated into closed-source software  
-
-See the LICENSE file for full details.
-
-## Philosophy on Usage
-
-This project exists to keep weather information free and accessible.
-
-While the GPL license allows commercial use, any modifications must remain open-source.
-
-If you use this project, please respect its intent:
-- avoid adding ads or tracking
-- avoid restricting access behind paywalls
+For a debug build:
+```bash
+./gradlew assembleFossDebug
+```
