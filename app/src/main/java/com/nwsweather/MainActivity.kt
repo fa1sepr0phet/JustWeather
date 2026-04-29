@@ -41,8 +41,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        requestCurrentLocation()
-
         setContent {
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             NwsWeatherTheme(appTheme = uiState.theme) {
