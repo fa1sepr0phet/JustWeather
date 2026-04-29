@@ -11,7 +11,7 @@ JustWeather exists for one reason: to show accurate weather without turning user
 ## Screenshots
 
 <p align="center">
-  <img src="images/4681.png" width="30%" />
+  <img src="images/4681clean.png" width="30%" />
   <img src="images/kcclean.png" width="30%" />
   <img src="images/kc2clean.png" width="30%" />
 </p>
