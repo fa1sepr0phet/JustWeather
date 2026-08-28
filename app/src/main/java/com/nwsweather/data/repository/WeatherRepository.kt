@@ -9,6 +9,7 @@ import com.nwsweather.data.local.WeatherSnapshotEntity
 import com.nwsweather.data.model.NwsAlertProperties
 import com.nwsweather.data.model.NwsForecastPeriod
 import com.nwsweather.data.model.NwsForecastResponse
+import com.nwsweather.data.model.NwsObservationProperties
 import com.nwsweather.data.network.NwsApi
 import android.content.Context
 import android.location.Geocoder
@@ -16,8 +17,10 @@ import android.os.Build
 import androidx.glance.appwidget.updateAll
 import com.nwsweather.location.DeviceLocationClient
 import com.nwsweather.widget.WeatherAppWidget
+import com.nwsweather.presentation.TemperatureUnit
 import com.nwsweather.util.roundCoordinate
 import com.nwsweather.util.NotificationHelper
+import com.nwsweather.util.convertTemperature
 import com.nwsweather.data.local.SettingsManager
 import retrofit2.HttpException
 import kotlin.coroutines.resume
@@ -26,6 +29,10 @@ import kotlin.coroutines.suspendCoroutine
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class WeatherRepository(
     private val nwsApi: NwsApi,
@@ -36,7 +43,13 @@ class WeatherRepository(
     private val settingsManager: SettingsManager,
     val appContext: Context
 ) {
+    companion object {
+        private const val POINT_CACHE_MAX_AGE_MS = 60 * 60 * 1000L
+    }
+
     fun observeSavedLocations(): Flow<List<SavedLocationEntity>> = savedLocationDao.observeAll()
+
+    suspend fun getSavedLocations(): List<SavedLocationEntity> = savedLocationDao.getAll()
 
     suspend fun deleteSavedLocation(location: SavedLocationEntity) {
         savedLocationDao.deleteById(location.id)
@@ -103,27 +116,12 @@ class WeatherRepository(
             )
         }
 
-        val point = getOrFetchPoint(latitude, longitude)
-
-        val forecastDeferred = async { nwsApi.getForecast(point.forecastUrl) }
-        val hourlyForecastDeferred = async { 
-            try { 
-                nwsApi.getForecast(point.forecastHourlyUrl) 
-            } catch (e: Exception) { 
-                null 
-            }
-        }
-        val alertsDeferred = async {
-            try {
-                nwsApi.getActiveAlerts("$latitude,$longitude").features.map { it.properties }
-            } catch (e: Exception) {
-                emptyList<NwsAlertProperties>()
-            }
-        }
-
-        val forecast = forecastDeferred.await()
-        val hourlyForecast = hourlyForecastDeferred.await()
-        val alerts = alertsDeferred.await()
+        val roundedLatitude = latitude.roundCoordinate()
+        val roundedLongitude = longitude.roundCoordinate()
+        val (point, weatherData) = fetchWeatherDataForLocation(
+            latitude = roundedLatitude,
+            longitude = roundedLongitude
+        )
 
         val displayName = buildDisplayName(
             preferredLabel = label,
@@ -143,8 +141,8 @@ class WeatherRepository(
                     id = existingId ?: 0L,
                     label = label,
                     address = matchedAddress,
-                    latitude = latitude,
-                    longitude = longitude,
+                    latitude = roundedLatitude,
+                    longitude = roundedLongitude,
                     city = point.city,
                     state = point.state,
                     displayOrder = displayOrder
@@ -153,13 +151,15 @@ class WeatherRepository(
         }
 
         ForecastLoadResult(
-            forecast = forecast,
-            hourlyForecast = hourlyForecast,
-            alerts = alerts,
+            forecast = weatherData.forecast,
+            hourlyForecast = weatherData.hourlyForecast,
+            alerts = weatherData.alerts,
             locationName = displayName,
-            latitude = latitude,
-            longitude = longitude,
-            source = ForecastSource.AddressSearch(matchedAddress)
+            latitude = roundedLatitude,
+            longitude = roundedLongitude,
+            source = ForecastSource.AddressSearch(matchedAddress),
+            observation = weatherData.observation,
+            timeZoneId = point.timeZone
         ).also { saveSnapshot(it) }
     }
 
@@ -191,55 +191,59 @@ class WeatherRepository(
         longitude: Double,
         source: ForecastSource = ForecastSource.Coordinates
     ): ForecastLoadResult = coroutineScope {
-        val point = getOrFetchPoint(latitude.roundCoordinate(), longitude.roundCoordinate())
-
-        val forecastDeferred = async { nwsApi.getForecast(point.forecastUrl) }
-        val hourlyForecastDeferred = async { 
-            try { 
-                nwsApi.getForecast(point.forecastHourlyUrl) 
-            } catch (e: Exception) { 
-                null 
-            }
-        }
-        val alertsDeferred = async {
-            try {
-                nwsApi.getActiveAlerts("${latitude.roundCoordinate()},${longitude.roundCoordinate()}").features.map { it.properties }
-            } catch (e: Exception) {
-                emptyList<NwsAlertProperties>()
-            }
-        }
-
-        val forecast = forecastDeferred.await()
-        val hourlyForecast = hourlyForecastDeferred.await()
-        val alerts = alertsDeferred.await()
+        val roundedLatitude = latitude.roundCoordinate()
+        val roundedLongitude = longitude.roundCoordinate()
+        val (point, weatherData) = fetchWeatherDataForLocation(
+            latitude = roundedLatitude,
+            longitude = roundedLongitude
+        )
 
         val displayName = buildDisplayName(
             city = point.city,
             state = point.state,
-            fallbackAddress = "${latitude.roundCoordinate()}, ${longitude.roundCoordinate()}"
+            fallbackAddress = "$roundedLatitude, $roundedLongitude"
         )
         ForecastLoadResult(
-            forecast = forecast,
-            hourlyForecast = hourlyForecast,
-            alerts = alerts,
+            forecast = weatherData.forecast,
+            hourlyForecast = weatherData.hourlyForecast,
+            alerts = weatherData.alerts,
             locationName = displayName,
-            latitude = latitude.roundCoordinate(),
-            longitude = longitude.roundCoordinate(),
-            source = source
+            latitude = roundedLatitude,
+            longitude = roundedLongitude,
+            source = source,
+            observation = weatherData.observation,
+            timeZoneId = point.timeZone
         ).also { saveSnapshot(it) }
     }
 
     private suspend fun saveSnapshot(result: ForecastLoadResult) {
         val current = result.currentPeriod ?: return
         val hourly = result.currentHourlyPeriod
+        val obs = result.observation
+        val observationTemperature = obs?.temperature?.value
+        val observationTemperatureUnit = observationTemperatureUnit(obs)
+
+        val temperature = observationTemperature?.let {
+            convertTemperature(it, observationTemperatureUnit, TemperatureUnit.FAHRENHEIT)
+        } ?: hourly?.temperature ?: current.temperature
+        val temperatureUnit = if (observationTemperature != null) {
+            "F"
+        } else {
+            hourly?.temperatureUnit ?: current.temperatureUnit
+        }
         
-        val humidity = current.relativeHumidity?.value?.toInt() 
+        val humidity = obs?.relativeHumidity?.value?.toInt() 
+            ?: current.relativeHumidity?.value?.toInt() 
             ?: hourly?.relativeHumidity?.value?.toInt()
 
-        val temperature = hourly?.temperature ?: current.temperature
-
         val isDaytime = hourly?.isDaytime ?: current.isDaytime
-        val shortForecast = (hourly?.shortForecast ?: current.shortForecast).orEmpty().ifBlank { "Forecast unavailable" }
+        val shortForecast = obs?.textDescription?.takeIf { it.isNotBlank() } 
+            ?: (hourly?.shortForecast ?: current.shortForecast).orEmpty().ifBlank { "Forecast unavailable" }
+
+        val windSpeed = obs?.windSpeed?.value?.let { "${it.toInt()} km/h" }
+            ?: (hourly?.windSpeed ?: current.windSpeed).orEmpty().ifBlank { "--" }
+        
+        val windDirection = (hourly?.windDirection ?: current.windDirection).orEmpty().ifBlank { "--" }
 
         weatherSnapshotDao.upsert(
             WeatherSnapshotEntity(
@@ -248,11 +252,11 @@ class WeatherRepository(
                 latitude = result.latitude,
                 longitude = result.longitude,
                 temperature = temperature,
-                temperatureUnit = hourly?.temperatureUnit ?: current.temperatureUnit,
+                temperatureUnit = temperatureUnit,
                 shortForecast = shortForecast,
                 humidity = humidity,
-                windSpeed = (hourly?.windSpeed ?: current.windSpeed).orEmpty().ifBlank { "--" },
-                windDirection = (hourly?.windDirection ?: current.windDirection).orEmpty().ifBlank { "--" },
+                windSpeed = windSpeed,
+                windDirection = windDirection,
                 uvIndex = 4, // Placeholder UV index
                 updatedAtEpochMs = System.currentTimeMillis(),
                 isDaytime = isDaytime
@@ -260,7 +264,6 @@ class WeatherRepository(
         )
 
         if (settingsManager.statusBarTempEnabled.value) {
-            val temperatureUnit = hourly?.temperatureUnit ?: current.temperatureUnit
             NotificationHelper(appContext).updateStatusBarTemperature(
                 temp = temperature,
                 sourceUnit = temperatureUnit,
@@ -276,12 +279,21 @@ class WeatherRepository(
         WeatherAppWidget().updateAll(appContext)
     }
 
-    private suspend fun getOrFetchPoint(latitude: Double, longitude: Double): PointCacheEntity {
+    private suspend fun getOrFetchPoint(
+        latitude: Double,
+        longitude: Double,
+        forceRefresh: Boolean = false
+    ): PointCacheEntity {
         val roundedLatitude = latitude.roundCoordinate()
         val roundedLongitude = longitude.roundCoordinate()
         val key = "$roundedLatitude,$roundedLongitude"
         val cached = pointCacheDao.get(key)
-        if (cached != null) return cached
+        if (!forceRefresh && cached != null) {
+            val cacheAgeMs = System.currentTimeMillis() - cached.cachedAtEpochMs
+            if (cacheAgeMs < POINT_CACHE_MAX_AGE_MS) {
+                return cached
+            }
+        }
 
         val point = try {
             nwsApi.getPointMetadata(
@@ -292,6 +304,10 @@ class WeatherRepository(
             if (e.code() == 404) {
                 throw Exception("Unable to retrieve location. The National Weather Service only provides data for the United States.")
             }
+            if (cached != null) return cached
+            throw e
+        } catch (e: Exception) {
+            if (cached != null) return cached
             throw e
         }
 
@@ -303,6 +319,7 @@ class WeatherRepository(
             forecastUrl = point.properties.forecast,
             forecastHourlyUrl = point.properties.forecastHourly,
             forecastGridDataUrl = point.properties.forecastGridData,
+            observationStations = point.properties.observationStations,
             timeZone = point.properties.timeZone,
             city = point.properties.relativeLocation?.properties?.city,
             state = point.properties.relativeLocation?.properties?.state,
@@ -310,6 +327,69 @@ class WeatherRepository(
         )
         pointCacheDao.insert(entity)
         return entity
+    }
+
+    private suspend fun fetchWeatherDataForLocation(
+        latitude: Double,
+        longitude: Double
+    ): Pair<PointCacheEntity, NwsWeatherData> {
+        val point = getOrFetchPoint(latitude, longitude)
+
+        return try {
+            point to fetchWeatherData(point, latitude, longitude)
+        } catch (e: HttpException) {
+            if (e.code() !in setOf(404, 410)) {
+                throw e
+            }
+
+            val refreshedPoint = getOrFetchPoint(latitude, longitude, forceRefresh = true)
+            refreshedPoint to fetchWeatherData(refreshedPoint, latitude, longitude)
+        }
+    }
+
+    private suspend fun fetchWeatherData(
+        point: PointCacheEntity,
+        latitude: Double,
+        longitude: Double
+    ): NwsWeatherData = coroutineScope {
+        val roundedLatitude = latitude.roundCoordinate()
+        val roundedLongitude = longitude.roundCoordinate()
+
+        val forecastDeferred = async { nwsApi.getForecast(point.forecastUrl) }
+        val hourlyForecastDeferred = async {
+            try {
+                nwsApi.getForecast(point.forecastHourlyUrl)
+            } catch (e: Exception) {
+                null
+            }
+        }
+        val alertsDeferred = async {
+            try {
+                nwsApi.getActiveAlerts("$roundedLatitude,$roundedLongitude").features.map { it.properties }
+            } catch (e: Exception) {
+                emptyList<NwsAlertProperties>()
+            }
+        }
+        val observationDeferred = async { fetchLatestObservation(point) }
+
+        NwsWeatherData(
+            forecast = forecastDeferred.await(),
+            hourlyForecast = hourlyForecastDeferred.await(),
+            alerts = alertsDeferred.await(),
+            observation = observationDeferred.await()
+        )
+    }
+
+    private suspend fun fetchLatestObservation(point: PointCacheEntity): NwsObservationProperties? {
+        val stationsUrl = point.observationStations ?: return null
+
+        return try {
+            val stations = nwsApi.getStations(stationsUrl)
+            val stationId = stations.features.firstOrNull()?.properties?.stationIdentifier ?: return null
+            nwsApi.getLatestObservation("https://api.weather.gov/stations/$stationId/observations/latest").properties
+        } catch (e: Exception) {
+            null
+        }
     }
 
     private fun buildDisplayName(
@@ -337,16 +417,26 @@ class WeatherRepository(
         return listOfNotNull(city, state).joinToString(", ").takeIf { it.isNotBlank() }
             ?: fallbackAddress
     }
+
+    private fun observationTemperatureUnit(observation: NwsObservationProperties?): String {
+        val unitCode = observation?.temperature?.unitCode.orEmpty()
+        return when {
+            unitCode.contains("degF", ignoreCase = true) -> "F"
+            else -> "C"
+        }
+    }
 }
 
 data class ForecastLoadResult(
     val forecast: NwsForecastResponse,
     val hourlyForecast: NwsForecastResponse? = null,
-    val alerts: List<NwsAlertProperties> = emptyList(),
+    val alerts: List<com.nwsweather.data.model.NwsAlertProperties> = emptyList(),
     val locationName: String,
     val latitude: Double,
     val longitude: Double,
-    val source: ForecastSource
+    val source: ForecastSource,
+    val observation: com.nwsweather.data.model.NwsObservationProperties? = null,
+    val timeZoneId: String? = null
 ) {
     val currentPeriod: NwsForecastPeriod?
         get() = forecast.properties.periods.firstOrNull()
@@ -356,6 +446,45 @@ data class ForecastLoadResult(
 
     val upcomingPeriods: List<NwsForecastPeriod>
         get() = forecast.properties.periods.drop(1)
+
+    val currentTemperatureValue: Double
+        get() = observation?.temperature?.value ?: currentHourlyPeriod?.temperature?.toDouble() ?: currentPeriod?.temperature?.toDouble() ?: 0.0
+
+    val currentTemperatureUnit: String
+        get() = when {
+            observation?.temperature?.value != null -> observation?.temperature?.unitCode?.let { unitCode ->
+                if (unitCode.contains("degF", ignoreCase = true)) "F" else "C"
+            } ?: "C"
+            else -> currentHourlyPeriod?.temperatureUnit ?: currentPeriod?.temperatureUnit ?: "F"
+        }
+
+    val currentShortForecast: String
+        get() = observation?.textDescription?.takeIf { it.isNotBlank() } ?: currentHourlyPeriod?.shortForecast ?: currentPeriod?.shortForecast ?: "Unknown"
+
+    val isDaytime: Boolean
+        get() = currentHourlyPeriod?.isDaytime ?: currentPeriod?.isDaytime ?: true
+
+    val currentReadingTimestampLabel: String?
+        get() = observation?.timestamp?.let { timestamp ->
+            formatReadingTimestampLabel(
+                prefix = "Observed",
+                timestamp = timestamp,
+                timeZoneId = timeZoneId,
+                stationId = observation.stationId
+            )
+        } ?: currentHourlyPeriod?.startTime?.let { startTime ->
+            formatReadingTimestampLabel(
+                prefix = "Hourly forecast",
+                timestamp = startTime,
+                timeZoneId = timeZoneId
+            )
+        } ?: forecast.properties.updated?.let { updated ->
+            formatReadingTimestampLabel(
+                prefix = "Forecast updated",
+                timestamp = updated,
+                timeZoneId = timeZoneId
+            )
+        }
 }
 
 sealed interface ForecastSource {
@@ -364,4 +493,35 @@ sealed interface ForecastSource {
     data object WidgetRefresh : ForecastSource
     data class AddressSearch(val query: String) : ForecastSource
     data class SavedLocation(val label: String) : ForecastSource
+}
+
+private data class NwsWeatherData(
+    val forecast: NwsForecastResponse,
+    val hourlyForecast: NwsForecastResponse?,
+    val alerts: List<NwsAlertProperties>,
+    val observation: NwsObservationProperties?
+)
+
+private fun formatReadingTimestampLabel(
+    prefix: String,
+    timestamp: String,
+    timeZoneId: String?,
+    stationId: String? = null
+): String? {
+    val parsedTimestamp = runCatching { OffsetDateTime.parse(timestamp) }.getOrNull() ?: return null
+    val zoneId = runCatching {
+        timeZoneId?.takeIf { it.isNotBlank() }?.let(ZoneId::of) ?: ZoneId.systemDefault()
+    }.getOrDefault(ZoneId.systemDefault())
+    val formatter = DateTimeFormatter.ofPattern("h:mm a z", Locale.getDefault())
+    val formattedTime = parsedTimestamp.atZoneSameInstant(zoneId).format(formatter)
+
+    return buildString {
+        append(prefix)
+        append(' ')
+        append(formattedTime)
+        stationId?.takeIf { it.isNotBlank() }?.let {
+            append(" at ")
+            append(it)
+        }
+    }
 }

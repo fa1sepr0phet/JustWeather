@@ -29,27 +29,19 @@ class WidgetRefreshWorker(
             val repository = container.weatherRepository
             val settings = container.settingsManager
             
-            val result = repository.refreshLatestSnapshot()
+            var result = repository.refreshLatestSnapshot()
+            
+            // If no snapshot exists (e.g. after destructive migration), try to recover using the first saved location
+            if (result == null) {
+                val locations = repository.getSavedLocations()
+                if (locations.isNotEmpty()) {
+                    result = repository.loadForecastForSavedLocation(locations.first())
+                }
+            }
             WeatherAppWidget().updateAll(applicationContext)
 
             val helper = NotificationHelper(applicationContext)
             helper.createNotificationChannel()
-
-            if (settings.statusBarTempEnabled.value && result != null) {
-                val period = result.currentHourlyPeriod ?: result.currentPeriod
-                if (period != null) {
-                    helper.updateStatusBarTemperature(
-                        temp = period.temperature,
-                        sourceUnit = period.temperatureUnit,
-                        targetUnit = settings.unit.value,
-                        locationName = result.locationName,
-                        forecast = period.shortForecast ?: "",
-                        isDaytime = period.isDaytime
-                    )
-                }
-            } else if (!settings.statusBarTempEnabled.value) {
-                helper.cancelStatusBarTemperature()
-            }
 
             if (settings.notificationsEnabled.value && result != null && result.alerts.isNotEmpty()) {
                 val alert = result.alerts.first()
@@ -59,14 +51,18 @@ class WidgetRefreshWorker(
                 if (alert.id != lastAlertId) {
                     helper.showWeatherAlert(
                         title = alert.event ?: "Weather Alert",
-                        message = alert.headline ?: "Severe weather conditions reported."
+                        message = alert.headline ?: "Severe weather conditions reported.",
+                        detailsUrl = "https://forecast.weather.gov/MapClick.php?lat=${result.latitude}&lon=${result.longitude}"
                     )
                     settings.setLastNotifiedAlertId(alert.id)
                 }
             }
         }.fold(
             onSuccess = { Result.success() },
-            onFailure = { Result.retry() }
+            onFailure = { 
+                it.printStackTrace()
+                Result.retry() 
+            }
         )
     }
 
@@ -75,7 +71,7 @@ class WidgetRefreshWorker(
         private const val IMMEDIATE_WORK_NAME = "weather_widget_immediate_refresh"
 
         fun schedulePeriodic(context: Context) {
-            val request = PeriodicWorkRequestBuilder<WidgetRefreshWorker>(20, TimeUnit.MINUTES)
+            val request = PeriodicWorkRequestBuilder<WidgetRefreshWorker>(15, TimeUnit.MINUTES)
                 .setConstraints(
                     Constraints.Builder()
                         .setRequiredNetworkType(NetworkType.CONNECTED)

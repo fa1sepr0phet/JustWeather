@@ -61,12 +61,21 @@ class SettingsManager(context: Context) {
 
     fun shouldPromptForRating(): Boolean {
         val weekInMs = 7 * 24 * 60 * 60 * 1000L
-        val hasRated = prefs.getBoolean(KEY_HAS_RATED, false)
-        return !hasRated && (System.currentTimeMillis() - _installTime > weekInMs)
+        val hasRespondedToRatingPrompt =
+            prefs.getBoolean(KEY_HAS_RESPONDED_TO_RATING_PROMPT, false) ||
+                prefs.getBoolean(KEY_HAS_RATED, false)
+        return !hasRespondedToRatingPrompt && (System.currentTimeMillis() - _installTime > weekInMs)
     }
 
     fun markRated() {
-        prefs.edit { putBoolean(KEY_HAS_RATED, true) }
+        prefs.edit {
+            putBoolean(KEY_HAS_RATED, true)
+            putBoolean(KEY_HAS_RESPONDED_TO_RATING_PROMPT, true)
+        }
+    }
+
+    fun markRatingPromptDismissed() {
+        prefs.edit { putBoolean(KEY_HAS_RESPONDED_TO_RATING_PROMPT, true) }
     }
 
     fun setTheme(theme: AppTheme) {
@@ -114,6 +123,7 @@ class SettingsManager(context: Context) {
         private const val KEY_HAS_SEEN_FAVORITES_HELP = "has_seen_favorites_help"
         private const val KEY_INSTALL_TIME = "install_time"
         private const val KEY_HAS_RATED = "has_rated"
+        private const val KEY_HAS_RESPONDED_TO_RATING_PROMPT = "has_responded_to_rating_prompt"
         private const val KEY_LAST_NOTIFIED_ALERT_ID = "last_notified_alert_id"
     }
 }

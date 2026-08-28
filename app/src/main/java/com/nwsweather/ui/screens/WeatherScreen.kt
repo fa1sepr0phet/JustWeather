@@ -123,11 +123,12 @@ fun WeatherScreen(
     )
     val context = LocalContext.current
 
-    val current = uiState.forecastResult?.currentPeriod
+    val forecastResult = uiState.forecastResult
+    val current = forecastResult?.currentPeriod
 
     val mood = mapWeatherMood(
-        forecast = current?.shortForecast ?: "",
-        isDay = current?.isDaytime ?: true
+        forecast = forecastResult?.currentShortForecast ?: current?.shortForecast ?: "",
+        isDay = forecastResult?.isDaytime ?: current?.isDaytime ?: true
     )
 
     val openNwsWebsite = { lat: Double, lon: Double ->
@@ -137,7 +138,7 @@ fun WeatherScreen(
     }
 
     val openRadar = { lat: Double, lon: Double ->
-        val json = """{"agenda":{"id":"weather","center":[$lon,$lat],"location":[$lon,$lat],"zoom":7,"layer":"bref_qcd"},"animating":false,"base":"standard","artcc":false,"county":false,"cwa":false,"rfc":false,"state":false,"menu":true,"shortFusedOnly":false,"opacity":{"alerts":0.8,"local":0.6,"localStations":0.8,"national":0.6}}"""
+        val json = """{"agenda":{"id":"national","center":[$lon,$lat],"location":[$lon,$lat],"zoom":7,"layer":"bref_qcd"},"animating":true,"base":"standard","artcc":false,"county":false,"cwa":false,"rfc":false,"state":false,"menu":false,"shortFusedOnly":false,"opacity":{"alerts":0.8,"local":0.6,"localStations":0.8,"national":0.6}}"""
         val encoded = Base64.encodeToString(json.toByteArray(), Base64.NO_WRAP or Base64.URL_SAFE)
         val url = "https://radar.weather.gov/?settings=v1_$encoded"
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
@@ -665,6 +666,11 @@ fun WeatherScreen(
                                     period = currentPeriod,
                                     hourlyPeriod = result.currentHourlyPeriod,
                                     locationName = result.locationName,
+                                    displayTemperature = result.currentTemperatureValue,
+                                    displayTemperatureUnit = result.currentTemperatureUnit,
+                                    forecastText = result.currentShortForecast,
+                                    readingTimestampLabel = result.currentReadingTimestampLabel,
+                                    isDaytime = result.isDaytime,
                                     temperatureUnit = uiState.temperatureUnit,
                                     cardColor = visuals.cardColor.copy(alpha = 0.6f),
                                     textColor = visuals.onCardTextColor,
@@ -723,7 +729,7 @@ fun RatingPrompt(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Enjoying Just NWS Weather?") },
-        text = { Text("Your rating helps others find this privacy-focused weather app. It only takes a minute!") },
+        text = { Text("Your rating helps others find this privacy-focused weather app. If you'd rather skip it, we won't ask again.") },
         confirmButton = {
             TextButton(onClick = onRate) {
                 Text("Rate Now")
@@ -731,7 +737,7 @@ fun RatingPrompt(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Later")
+                Text("No Thanks")
             }
         }
     )

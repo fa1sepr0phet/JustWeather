@@ -3,7 +3,7 @@ package com.nwsweather.util
 import com.nwsweather.presentation.TemperatureUnit
 import kotlin.math.roundToInt
 
-fun convertTemperature(value: Int, sourceUnit: String, targetUnit: TemperatureUnit): Int {
+fun convertTemperature(value: Double, sourceUnit: String, targetUnit: TemperatureUnit): Int {
     val isCelsiusSource = sourceUnit.equals("C", ignoreCase = true)
 
     return when (targetUnit) {
@@ -11,20 +11,24 @@ fun convertTemperature(value: Int, sourceUnit: String, targetUnit: TemperatureUn
             if (isCelsiusSource) {
                 ((value * 9 / 5.0) + 32).roundToInt()
             } else {
-                value
+                value.roundToInt()
             }
         }
         TemperatureUnit.CELSIUS -> {
             if (!isCelsiusSource) {
                 ((value - 32) * 5 / 9.0).roundToInt()
             } else {
-                value
+                value.roundToInt()
             }
         }
     }
 }
 
-fun formatTemperature(value: Int, sourceUnit: String, targetUnit: TemperatureUnit): String {
+fun convertTemperature(value: Int, sourceUnit: String, targetUnit: TemperatureUnit): Int {
+    return convertTemperature(value.toDouble(), sourceUnit, targetUnit)
+}
+
+fun formatTemperature(value: Double, sourceUnit: String, targetUnit: TemperatureUnit): String {
     val converted = convertTemperature(value, sourceUnit, targetUnit)
     val suffix = when (targetUnit) {
         TemperatureUnit.FAHRENHEIT -> "\u00B0F"
@@ -32,4 +36,8 @@ fun formatTemperature(value: Int, sourceUnit: String, targetUnit: TemperatureUni
     }
 
     return "$converted$suffix"
+}
+
+fun formatTemperature(value: Int, sourceUnit: String, targetUnit: TemperatureUnit): String {
+    return formatTemperature(value.toDouble(), sourceUnit, targetUnit)
 }

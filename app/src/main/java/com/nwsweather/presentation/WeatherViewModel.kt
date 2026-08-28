@@ -26,12 +26,40 @@ class WeatherViewModel(
     val uiState: StateFlow<WeatherUiState> = _uiState.asStateFlow()
 
     private var searchJob: Job? = null
+    private var refreshJob: Job? = null
 
     init {
         observeSavedLocations()
         observeSettings()
         checkRatingPrompt()
         refreshStatusBarTemp()
+        startPeriodicRefresh()
+    }
+
+    private fun startPeriodicRefresh() {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
+            // Check staleness and restore state immediately on start
+            val snapshot = repository.getLatestSnapshot()
+            val tenMinutesAgo = System.currentTimeMillis() - (10 * 60 * 1000)
+            
+            if (snapshot != null) {
+                if (snapshot.updatedAtEpochMs < tenMinutesAgo || _uiState.value.forecastResult == null) {
+                    launchLoad {
+                        repository.loadForecastForCoordinates(
+                            latitude = snapshot.latitude,
+                            longitude = snapshot.longitude,
+                            source = com.nwsweather.data.repository.ForecastSource.Coordinates
+                        )
+                    }
+                }
+            }
+
+            while (true) {
+                delay(10 * 60 * 1000) // 10 minutes
+                refreshForecast()
+            }
+        }
     }
 
     fun prepareSearch() {
@@ -129,6 +157,7 @@ class WeatherViewModel(
     }
 
     fun onDismissRatingPrompt() {
+        settingsManager.markRatingPromptDismissed()
         _uiState.update { it.copy(showRatingPrompt = false) }
     }
 

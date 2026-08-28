@@ -15,8 +15,10 @@ object ApiModule {
 
     private val nwsHeaders = Interceptor { chain ->
         val request = chain.request().newBuilder()
-            .header("User-Agent", "(Just NWS Weather, anonymous)")
+            .header("User-Agent", "(Just NWS Weather, falsepr0phet@protonmail.com)")
             .header("Accept", "application/geo+json")
+            .header("Cache-Control", "no-cache")
+            .header("Pragma", "no-cache")
             .build()
         chain.proceed(request)
     }

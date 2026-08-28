@@ -16,6 +16,7 @@ data class NwsPointProperties(
     val forecast: String,
     val forecastHourly: String,
     val forecastGridData: String,
+    val observationStations: String? = null,
     val timeZone: String? = null,
     val relativeLocation: RelativeLocation? = null
 )
@@ -86,4 +87,42 @@ data class NwsAlertProperties(
     val certainty: String? = null,
     val urgency: String? = null,
     val event: String? = null
+)
+
+@Serializable
+data class NwsObservationResponse(
+    val properties: NwsObservationProperties
+)
+
+@Serializable
+data class NwsObservationProperties(
+    val timestamp: String? = null,
+    val stationId: String? = null,
+    val stationName: String? = null,
+    val temperature: NwsObservationValue? = null,
+    val relativeHumidity: NwsObservationValue? = null,
+    val windSpeed: NwsObservationValue? = null,
+    val windDirection: NwsObservationValue? = null,
+    val textDescription: String? = null
+)
+
+@Serializable
+data class NwsObservationValue(
+    val value: Double? = null,
+    val unitCode: String? = null
+)
+
+@Serializable
+data class NwsStationsResponse(
+    val features: List<NwsStationFeature> = emptyList()
+)
+
+@Serializable
+data class NwsStationFeature(
+    val properties: NwsStationProperties
+)
+
+@Serializable
+data class NwsStationProperties(
+    val stationIdentifier: String
 )

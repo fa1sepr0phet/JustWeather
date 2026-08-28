@@ -33,18 +33,19 @@ fun WeatherHeroCard(
     period: NwsForecastPeriod,
     hourlyPeriod: NwsForecastPeriod? = null,
     locationName: String,
+    displayTemperature: Double = (hourlyPeriod?.temperature ?: period.temperature).toDouble(),
+    displayTemperatureUnit: String = hourlyPeriod?.temperatureUnit ?: period.temperatureUnit,
+    forecastText: String = hourlyPeriod?.shortForecast ?: period.shortForecast ?: period.name,
+    readingTimestampLabel: String? = null,
+    isDaytime: Boolean = hourlyPeriod?.isDaytime ?: period.isDaytime,
     temperatureUnit: TemperatureUnit = TemperatureUnit.FAHRENHEIT,
     cardColor: Color = Color.White.copy(alpha = 0.6f),
     textColor: Color = MaterialTheme.colorScheme.onSurface,
     onClick: () -> Unit = {}
 ) {
-    val displayTemp = hourlyPeriod?.temperature ?: period.temperature
-    val displayUnit = hourlyPeriod?.temperatureUnit ?: period.temperatureUnit
-    val forecastText = hourlyPeriod?.shortForecast ?: period.shortForecast ?: period.name
-    
     val icon = weatherIconForForecast(
         forecast = forecastText,
-        isDaytime = hourlyPeriod?.isDaytime ?: period.isDaytime
+        isDaytime = isDaytime
     )
 
     Card(
@@ -79,8 +80,8 @@ fun WeatherHeroCard(
                 Column {
                     Text(
                         text = formatTemperature(
-                            value = displayTemp,
-                            sourceUnit = displayUnit,
+                            value = displayTemperature,
+                            sourceUnit = displayTemperatureUnit,
                             targetUnit = temperatureUnit
                         ),
                         style = MaterialTheme.typography.displayMedium,
@@ -92,6 +93,14 @@ fun WeatherHeroCard(
                         style = MaterialTheme.typography.titleLarge,
                         color = textColor
                     )
+
+                    readingTimestampLabel?.let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = textColor.copy(alpha = 0.72f)
+                        )
+                    }
                 }
             }
 

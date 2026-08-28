@@ -47,7 +47,8 @@ class NotificationHelper(private val context: Context) {
         notificationManager.createNotificationChannel(statusChannel)
     }
 
-    fun showWeatherAlert(title: String, message: String) {
+    fun showWeatherAlert(title: String, message: String, detailsUrl: String? = null) {
+        createNotificationChannel()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (
                 ActivityCompat.checkSelfPermission(
@@ -59,12 +60,33 @@ class NotificationHelper(private val context: Context) {
             }
         }
 
+        val contentIntent = PendingIntent.getBroadcast(
+            context,
+            ALERT_OPEN_REQUEST_CODE,
+            Intent(context, AlertNotificationReceiver::class.java).apply {
+                action = ACTION_OPEN_ALERT_NOTIFICATION
+                putExtra(EXTRA_DETAILS_URL, detailsUrl)
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val deleteIntent = PendingIntent.getBroadcast(
+            context,
+            ALERT_DISMISS_REQUEST_CODE,
+            Intent(context, AlertNotificationReceiver::class.java).apply {
+                action = ACTION_DISMISS_ALERT_NOTIFICATION
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_warning)
             .setContentTitle(title)
             .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setDefaults(NotificationCompat.DEFAULT_ALL) // Ensure sound/vibe for real alerts
+            .setContentIntent(contentIntent)
+            .setDeleteIntent(deleteIntent)
             .setAutoCancel(true)
             .build()
 
@@ -173,9 +195,15 @@ class NotificationHelper(private val context: Context) {
     }
 
     companion object {
+        const val ACTION_OPEN_ALERT_NOTIFICATION = "com.nwsweather.action.OPEN_ALERT_NOTIFICATION"
+        const val ACTION_DISMISS_ALERT_NOTIFICATION = "com.nwsweather.action.DISMISS_ALERT_NOTIFICATION"
+        const val EXTRA_DETAILS_URL = "extra_details_url"
+
         private const val CHANNEL_ID = "weather_alerts"
         private const val STATUS_BAR_CHANNEL_ID = "status_bar_temp_v8"
         private const val NOTIFICATION_ID = 1001
         private const val STATUS_BAR_NOTIFICATION_ID = 1002
+        private const val ALERT_OPEN_REQUEST_CODE = 2001
+        private const val ALERT_DISMISS_REQUEST_CODE = 2002
     }
 }

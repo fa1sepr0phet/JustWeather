@@ -28,8 +28,14 @@ import com.nwsweather.MainActivity
 import com.nwsweather.myapp.R
 import com.nwsweather.data.local.AppDatabase
 import com.nwsweather.data.local.WeatherSnapshotEntity
+import com.nwsweather.data.local.SettingsManager
 import com.nwsweather.ui.theme.WeatherMood
 import com.nwsweather.ui.theme.mapWeatherMood
+import com.nwsweather.util.convertTemperature
+import com.nwsweather.presentation.TemperatureUnit
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -49,15 +55,17 @@ class WeatherAppWidget : GlanceAppWidget() {
         val snapshot = withContext(Dispatchers.IO) {
             AppDatabase.getInstance(context).weatherSnapshotDao().getLatest()
         }
+        val settings = SettingsManager(context)
+        val unit = settings.unit.value
 
         provideContent {
-            WeatherWidgetContent(snapshot = snapshot)
+            WeatherWidgetContent(snapshot = snapshot, preferredUnit = unit)
         }
     }
 }
 
 @Composable
-private fun WeatherWidgetContent(snapshot: WeatherSnapshotEntity?) {
+private fun WeatherWidgetContent(snapshot: WeatherSnapshotEntity?, preferredUnit: TemperatureUnit) {
     val size = LocalSize.current
     val isPill = size.height < 100.dp
     val radius = if (isPill) 999.dp else 24.dp
@@ -76,17 +84,18 @@ private fun WeatherWidgetContent(snapshot: WeatherSnapshotEntity?) {
             EmptyWeatherWidget()
         } else {
             when {
-                size.width <= 160.dp && size.height <= 90.dp -> Loaded2x1Pill(snapshot)
-                size.width <= 160.dp -> Loaded2x2Square(snapshot)
-                size.height <= 90.dp -> Loaded4x1Pill(snapshot)
-                else -> Loaded4x2Rect(snapshot)
+                size.width <= 160.dp && size.height <= 90.dp -> Loaded2x1Pill(snapshot, preferredUnit)
+                size.width <= 160.dp -> Loaded2x2Square(snapshot, preferredUnit)
+                size.height <= 90.dp -> Loaded4x1Pill(snapshot, preferredUnit)
+                else -> Loaded4x2Rect(snapshot, preferredUnit)
             }
         }
     }
 }
 
 @Composable
-private fun Loaded2x1Pill(snapshot: WeatherSnapshotEntity) {
+private fun Loaded2x1Pill(snapshot: WeatherSnapshotEntity, preferredUnit: TemperatureUnit) {
+    val displayTemp = convertTemperature(snapshot.temperature, snapshot.temperatureUnit, preferredUnit)
     Row(
         modifier = GlanceModifier.fillMaxSize(),
         verticalAlignment = Alignment.CenterVertically,
@@ -96,7 +105,7 @@ private fun Loaded2x1Pill(snapshot: WeatherSnapshotEntity) {
         Spacer(modifier = GlanceModifier.width(8.dp))
         Column {
             Text(
-                text = "${snapshot.temperature}°",
+                text = "$displayTemp°",
                 style = TextStyle(color = ColorProvider(Color.White), fontWeight = FontWeight.Bold, fontSize = 20.sp)
             )
             Text(
@@ -109,7 +118,8 @@ private fun Loaded2x1Pill(snapshot: WeatherSnapshotEntity) {
 }
 
 @Composable
-private fun Loaded2x2Square(snapshot: WeatherSnapshotEntity) {
+private fun Loaded2x2Square(snapshot: WeatherSnapshotEntity, preferredUnit: TemperatureUnit) {
+    val displayTemp = convertTemperature(snapshot.temperature, snapshot.temperatureUnit, preferredUnit)
     Column(
         modifier = GlanceModifier.fillMaxSize(),
         verticalAlignment = Alignment.CenterVertically,
@@ -117,7 +127,7 @@ private fun Loaded2x2Square(snapshot: WeatherSnapshotEntity) {
     ) {
         ConditionIcon(snapshot)
         Text(
-            text = "${snapshot.temperature}°",
+            text = "$displayTemp°",
             style = TextStyle(color = ColorProvider(Color.White), fontWeight = FontWeight.Bold, fontSize = 32.sp)
         )
         Text(
@@ -134,7 +144,8 @@ private fun Loaded2x2Square(snapshot: WeatherSnapshotEntity) {
 }
 
 @Composable
-private fun Loaded4x1Pill(snapshot: WeatherSnapshotEntity) {
+private fun Loaded4x1Pill(snapshot: WeatherSnapshotEntity, preferredUnit: TemperatureUnit) {
+    val displayTemp = convertTemperature(snapshot.temperature, snapshot.temperatureUnit, preferredUnit)
     Row(
         modifier = GlanceModifier.fillMaxSize(),
         verticalAlignment = Alignment.CenterVertically
@@ -143,14 +154,13 @@ private fun Loaded4x1Pill(snapshot: WeatherSnapshotEntity) {
         Spacer(modifier = GlanceModifier.width(12.dp))
         Column(modifier = GlanceModifier.defaultWeight()) {
             Text(
-                text = "${snapshot.temperature}° ${snapshot.locationName}",
+                text = "$displayTemp° ${snapshot.locationName}",
                 style = TextStyle(color = ColorProvider(Color.White), fontWeight = FontWeight.Bold, fontSize = 18.sp),
                 maxLines = 1
             )
             val details = listOfNotNull(
                 snapshot.shortForecast,
-                snapshot.humidity?.let { "Hum: $it%" },
-                snapshot.uvIndex?.let { "UV: $it" }
+                snapshot.humidity?.let { "Hum: $it%" }
             ).joinToString(" • ")
             Text(
                 text = details,
@@ -162,7 +172,8 @@ private fun Loaded4x1Pill(snapshot: WeatherSnapshotEntity) {
 }
 
 @Composable
-private fun Loaded4x2Rect(snapshot: WeatherSnapshotEntity) {
+private fun Loaded4x2Rect(snapshot: WeatherSnapshotEntity, preferredUnit: TemperatureUnit) {
+    val displayTemp = convertTemperature(snapshot.temperature, snapshot.temperatureUnit, preferredUnit)
     Row(modifier = GlanceModifier.fillMaxSize()) {
         Column(
             modifier = GlanceModifier.defaultWeight().fillMaxHeight(),
@@ -171,36 +182,43 @@ private fun Loaded4x2Rect(snapshot: WeatherSnapshotEntity) {
         ) {
             ConditionIcon(snapshot)
             Text(
-                text = "${snapshot.temperature}°",
+                text = "$displayTemp°",
                 style = TextStyle(color = ColorProvider(Color.White), fontWeight = FontWeight.Bold, fontSize = 36.sp)
             )
             Text(text = snapshot.locationName, style = TextStyle(color = ColorProvider(Color.White)))
             
-            Row(modifier = GlanceModifier.padding(top = 4.dp)) {
-                snapshot.humidity?.let {
-                    Text(
-                        text = "H: $it% ",
-                        style = TextStyle(color = ColorProvider(Color(0xCCFFFFFF)), fontSize = 12.sp)
-                    )
-                }
-                snapshot.uvIndex?.let {
-                    Text(
-                        text = "UV: $it",
-                        style = TextStyle(color = ColorProvider(Color(0xCCFFFFFF)), fontSize = 12.sp)
-                    )
-                }
-            }
+            val updateTime = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(snapshot.updatedAtEpochMs))
+            Text(
+                text = "Updated $updateTime",
+                style = TextStyle(color = ColorProvider(Color(0x99FFFFFF)), fontSize = 10.sp)
+            )
         }
         
-        // Right side: 3-day forecast placeholder
         Column(
             modifier = GlanceModifier.width(120.dp).fillMaxHeight().padding(start = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ForecastRow("Tonight", "42°")
-            ForecastRow("Tue", "55°")
-            ForecastRow("Tue Night", "38°")
+            snapshot.humidity?.let {
+                DetailRow("Humidity", "$it%")
+            }
+            DetailRow("Wind", "${snapshot.windSpeed} ${snapshot.windDirection}")
+            DetailRow("Forecast", snapshot.shortForecast)
         }
+    }
+}
+
+@Composable
+private fun DetailRow(label: String, value: String) {
+    Column(modifier = GlanceModifier.padding(vertical = 2.dp)) {
+        Text(
+            text = label,
+            style = TextStyle(color = ColorProvider(Color(0xCCFFFFFF)), fontSize = 10.sp)
+        )
+        Text(
+            text = value,
+            style = TextStyle(color = ColorProvider(Color.White), fontSize = 12.sp, fontWeight = FontWeight.Medium),
+            maxLines = 1
+        )
     }
 }
 

@@ -24,6 +24,7 @@ data class PointCacheEntity(
     val forecastUrl: String,
     val forecastHourlyUrl: String,
     val forecastGridDataUrl: String,
+    val observationStations: String? = null,
     val timeZone: String? = null,
     val city: String? = null,
     val state: String? = null,
